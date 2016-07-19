@@ -26,8 +26,19 @@ For MCU programming you can use [ST-Link](https://github.com/texane/stlink) util
  ```
     
 2. ST-Link utility setup instructions are [here](https://github.com/texane/stlink)
-
-
-
-
-
+3. Set the environment variables
+```bash
+export PATH=$PATH:<stm32_tools>/gcc-arm-none-eabi-5_4-2016q2/bin
+export PATH=$PATH:<stlink_path>
+export STM32CUBEROOT=<stm32_tools>/STM32Cube_FW_F1_V1.0.0
+```
+ 
+## How to build the projects
+ ```bash
+ git clone https://github.com/zserg/stm32_projects.git
+ cd stm32_projects/<project_name>
+ make -r
+ 
+ #flash MCU
+ make flash_stlink
+ ```
