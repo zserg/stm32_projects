@@ -189,4 +189,5 @@ clean:
 	-rm -rf $(PROJECT).bin
 	-rm -rf $(SRC:.c=.lst)
 	-rm -rf $(ASRC:.s=.lst)
+	-rm -rf $(STARTUP:.s=.lst)
 # *** EOF ***
