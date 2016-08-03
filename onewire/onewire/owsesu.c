@@ -64,7 +64,7 @@ SMALLINT owAcquire(int portnum, char *port_zstr)
    if (!DS2480Detect(portnum))
    {
       CloseCOM(portnum);
-      OWERROR(OWERROR_DS2480_NOT_DETECTED);
+      //OWERROR(OWERROR_DS2480_NOT_DETECTED);
       return FALSE;
    }
 

@@ -1,7 +1,6 @@
 /**
   ******************************************************************************
   * @file    stm32f1xx_it.c
-  * @date    20/07/2016 18:06:10
   * @brief   Interrupt Service Routines.
   ******************************************************************************
   *
@@ -35,10 +34,13 @@
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx.h"
 #include "stm32f1xx_it.h"
+
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+
 /* External variables --------------------------------------------------------*/
+extern UART_HandleTypeDef huart2;
 
 /******************************************************************************/
 /*            Cortex-M3 Processor Interruption and Exception Handlers         */ 
@@ -57,6 +59,27 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   /* USER CODE END SysTick_IRQn 1 */
+}
+
+/******************************************************************************/
+/* STM32F1xx Peripheral Interrupt Handlers                                    */
+/* Add here the Interrupt Handlers for the used peripherals.                  */
+/* For the available peripheral interrupt handler names,                      */
+/* please refer to the startup file (startup_stm32f1xx.s).                    */
+/******************************************************************************/
+
+/**
+* @brief This function handles USART2 global interrupt.
+*/
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

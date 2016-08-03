@@ -1,7 +1,6 @@
 /**
   ******************************************************************************
   * File Name          : main.c
-  * Date               : 20/07/2016 18:06:10
   * Description        : Main program body
   ******************************************************************************
   *
@@ -31,7 +30,6 @@
   *
   ******************************************************************************
   */
-
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
 
@@ -44,6 +42,7 @@
 
 #define MAXDEVICES   20
 #define ONEWIRE_P 2
+#define RXBUFFERSIZE 64
 
 /* USER CODE END Includes */
 
@@ -54,11 +53,13 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 void DisplaySerialNum(uchar sn[8]);
 int WeakReadTemperature(int, uchar*, float*);
-
+/* Buffer used for reception */
+ uint8_t aRxBuffer[RXBUFFERSIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void Error_Handler(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
@@ -82,7 +83,6 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  printf("Hello, world!\n\r");
 
   /* USER CODE END 1 */
 
@@ -100,7 +100,9 @@ int main(void)
   MX_USART2_UART_Init();
 
   /* USER CODE BEGIN 2 */
-   uchar FamilySN[MAXDEVICES][8];
+  printf("Hello, world!\r\n");
+
+  uchar FamilySN[MAXDEVICES][8];
    float current_temp;
    int i = 0;
    int j = 0;
@@ -125,8 +127,10 @@ int main(void)
 //   while(1)
 //  {
       j = 0;
+      printf("FindDevices\r\n");
       // Find the device(s)
       NumDevices = FindDevices(portnum, FamilySN, 0x10, MAXDEVICES);
+      printf("NumDevices=%d",NumDevices);
       if (NumDevices>0)
       {
          printf("\r\n");
@@ -168,11 +172,14 @@ int main(void)
 
   /* USER CODE END 2 */
 
-  /* USER CODE BEGIN 3 */
   /* Infinite loop */
-
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
+  /* USER CODE END WHILE */
+
+  /* USER CODE BEGIN 3 */
+
 
   }
   /* USER CODE END 3 */
@@ -188,26 +195,37 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
 
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
-  HAL_RCC_OscConfig(&RCC_OscInitStruct);
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_PCLK1;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2);
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-  __HAL_RCC_AFIO_CLK_ENABLE();
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
+  HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+
+  /* SysTick_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
 /* USART1 init function */
-void MX_USART1_UART_Init(void)
+static void MX_USART1_UART_Init(void)
 {
 
   huart1.Instance = USART1;
@@ -218,12 +236,15 @@ void MX_USART1_UART_Init(void)
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  HAL_UART_Init(&huart1);
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
 }
 
 /* USART2 init function */
-void MX_USART2_UART_Init(void)
+static void MX_USART2_UART_Init(void)
 {
 
   huart2.Instance = USART2;
@@ -234,23 +255,26 @@ void MX_USART2_UART_Init(void)
   huart2.Init.Mode = UART_MODE_TX_RX;
   huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  HAL_UART_Init(&huart2);
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
 }
 
-/** Configure pins as
-        * Analog
-        * Input
+/** Configure pins as 
+        * Analog 
+        * Input 
         * Output
         * EVENT_OUT
         * EXTI
 */
-void MX_GPIO_Init(void)
+static void MX_GPIO_Init(void)
 {
 
   /* GPIO Ports Clock Enable */
-  __GPIOD_CLK_ENABLE();
-  __GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
 }
 
@@ -288,14 +312,18 @@ void DisplaySerialNum(uchar sn[8])
 //
 int WriteCOM(int portnum, int outlen, uchar *outbuf)
 {
-   if(portnum==1)
-    {
-      return HAL_UART_Transmit(&huart1, (uint8_t *)outbuf, outlen, 0xFFFF) == HAL_OK;
-    }
-   else
-    {
-      return HAL_UART_Transmit(&huart2, (uint8_t *)outbuf, outlen, 0xFFFF) == HAL_OK;
-    }
+   UART_HandleTypeDef *uart;
+
+   printf("WriteCom %d\r\n",outlen);
+   uart = (portnum == 0) ? &huart1 : &huart2;
+
+   if(HAL_UART_Receive_IT(uart, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK)
+   {
+      OWERROR(55);
+      return 0;
+   }
+
+   return HAL_UART_Transmit(uart, (uint8_t *)outbuf, outlen, 0xFFFF) == HAL_OK;
 }
 
 //----------------------------------------------------------------------
@@ -311,24 +339,25 @@ int WriteCOM(int portnum, int outlen, uchar *outbuf)
 //
 int ReadCOM(int portnum, int inlen, uchar *inbuf)
 {
-   uint16_t status;
-   status = 0;
+   uint32_t timeout;
 
-   if(portnum==1)
-    {
-      if(HAL_UART_Receive(&huart1, (uint8_t *)inbuf, inlen, 0xFFFF) == HAL_OK)
-        {
-          status = inlen;
-        }
-    }
-   else
-    {
-      if(HAL_UART_Receive(&huart2, (uint8_t *)inbuf, inlen, 0xFFFF) == HAL_OK)
-        {
-          status = inlen;
-        }
-    }
-   return status;
+   UART_HandleTypeDef *uart;
+
+   uart = (portnum == 0) ? &huart1 : &huart2;
+   timeout = 0;
+
+   printf("\r\nReadCom start (portnum=%d, inlen=%d)\r\n",portnum,inlen);
+
+   while(--timeout)
+   {
+     if(uart->RxXferCount == inlen)
+     {
+        printf("\r\nReadCom status =%d (%x)\r\n",inlen,inbuf[0]);
+        return inlen;
+     }
+   }
+   printf("\r\nReadCom Timeout\r\n");
+   return 0;
 }
 
 void FlushCOM(int portnum)
@@ -366,7 +395,7 @@ void BreakCOM(int portnum)
     }
    else
     {
-      HAL_LIN_SendBreak(&huart1);
+      HAL_LIN_SendBreak(&huart2);
     }
 }
 
@@ -470,6 +499,21 @@ int WeakReadTemperature(int portnum, uchar *SerialNum, float *Temp)
 
 /* USER CODE END 4 */
 
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @param  None
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler */
+  /* User can add his own implementation to report the HAL error return state */
+  while(1) 
+  {
+  }
+  /* USER CODE END Error_Handler */ 
+}
+
 #ifdef USE_FULL_ASSERT
 
 /**
@@ -492,10 +536,10 @@ void assert_failed(uint8_t* file, uint32_t line)
 
 /**
   * @}
-  */
+  */ 
 
 /**
   * @}
-*/
+*/ 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
